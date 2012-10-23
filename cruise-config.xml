@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cruise xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="cruise-config.xsd" schemaVersion="57">
+  <server artifactsdir="artifacts" serverId="0332c2a9-2985-45a9-90ba-29c7138248ea" />
+  <pipelines group="DonnorConnect">
+    <pipeline name="Commit">
+      <materials>
+        <git url="https://github.com/DonorConnect/Donor-Connect.git" />
+      </materials>
+      <stage name="build">
+        <jobs>
+          <job name="compile">
+            <tasks>
+              <exec command="./go" workingdir="Donor-Connect-App">
+                <arg>compile</arg>
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+    </pipeline>
+  </pipelines>
+  <agents>
+    <agent hostname="localhost.localdomain" ipaddress="10.0.2.15" uuid="35b6656a-7198-4e8d-91f1-b54611b1a6ce" />
+  </agents>
+</cruise>
