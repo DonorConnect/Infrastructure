@@ -8,7 +8,7 @@
       </materials>
       <stage name="build">
         <jobs>
-          <job name="compile">
+          <job name="build">
             <tasks>
               <exec command="./go" workingdir="Donor-Connect-App">
                 <arg>compile</arg>
