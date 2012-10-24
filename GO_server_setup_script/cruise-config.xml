@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <cruise xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="cruise-config.xsd" schemaVersion="57">
-  <server artifactsdir="artifacts" />
+  <server artifactsdir="artifacts" serverId="7611b7d3-8652-4091-966c-19a7bc78b7d0" />
   <pipelines group="DonnorConnect">
     <pipeline name="Commit">
       <materials>
@@ -20,6 +20,6 @@
     </pipeline>
   </pipelines>
   <agents>
-    <agent hostname="localhost.localdomain" ipaddress="10.0.2.15" uuid="35b6656a-7198-4e8d-91f1-b54611b1a6ce" />
+    <agent hostname="twu29vm17.thoughtworks.com" ipaddress="10.10.4.119" uuid="6c29514a-5166-46c1-b356-35c0787e5252" />
   </agents>
 </cruise>
