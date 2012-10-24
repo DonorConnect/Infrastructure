@@ -11,7 +11,7 @@
           <job name="build">
             <tasks>
               <exec command="./go" workingdir="Donor-Connect-App">
-                <arg>compile</arg>
+                <arg>build</arg>
               </exec>
             </tasks>
           </job>
