@@ -4,7 +4,7 @@ yum install unzip -y
 yum install git -y
 
 rpm -ivh http://10.10.4.119/jdk-7u9-linux-x64.rpm 
-wget http://10.10.4.119/jdk-6u34-linux-x64.bin -O /usr/java/jdk-6u34-linuxjdk-6u34-linux-x64.bin
+wget http://10.10.4.119/jdk-6u34-linux-x64.bin -O /usr/java/jdk-6u34-linux-x64.bin
 chmod u+x /usr/java/jdk-6u34-linux-x64.bin
 cd /usr/java
 ./jdk-6u34-linux-x64.bin
