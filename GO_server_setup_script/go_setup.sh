@@ -4,12 +4,12 @@ yum install unzip -y
 yum install git -y
 
 rpm -ivh http://10.10.4.119/jdk-7u9-linux-x64.rpm 
-wget http://10.10.4.119/jdk-6u34-linux-x64.bin
-chmod u+x jdk-6u34-linux-x64.bin
-exec jdk-6u34-linux-x64.bin
-mv jdk-6u34-linux-x64 /usr/java
+wget http://10.10.4.119/jdk-6u34-linux-x64.bin -O /usr/java/jdk-6u34-linuxjdk-6u34-linux-x64.bin
+chmod u+x /usr/java/jdk-6u34-linux-x64.bin
+cd /usr/java
+./jdk-6u34-linux-x64.bin
 rm latest
-ln -s latest /usr/java/jdk1.6.0_09
+ln -s /usr/java/jdk1.6.0_34 latest
 
 #Install Go Server and its config
 mkdir /etc/go
