@@ -11,6 +11,13 @@ cd /usr/java
 rm latest
 ln -s /usr/java/jdk1.6.0_34 latest
 
+#Create and copy Go-server's public key to Qa environment and deployment environment
+ssh-keygen -t dsa
+cd ~/.ssh
+chmod 755 .ssh
+scp ~/.ssh/id_dsa.pub roo@10.10.4.121:.ssh/authorized_keys
+scp ~/.ssh/id_dsa.pub roo@10.10.4.123:.ssh/authorized_keys
+
 #Install Go Server and its config
 mkdir /etc/go
 curl -o /etc/go/cruise-config.xml https://raw.github.com/DonorConnect/Infrastructure/master/GO_server_setup_script/cruise-config.xml 
