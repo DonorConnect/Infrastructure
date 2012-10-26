@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <cruise xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="cruise-config.xsd" schemaVersion="57">
-  <server artifactsdir="artifacts" serverId="7611b7d3-8652-4091-966c-19a7bc78b7d0" />
-<pipelines group="DonnorConnect">
+  <server artifactsdir="artifacts" />
+  <pipelines group="DonnorConnect">
     <pipeline name="Commit">
       <environmentvariables>
         <variable name="JAVA_HOME">
@@ -29,8 +29,34 @@
         </jobs>
       </stage>
     </pipeline>
+    <pipeline name="QADeploy">
+      <environmentvariables>
+        <variable name="JAVA_HOME">
+          <value>/usr/java/jdk1.7.0_09</value>
+        </variable>
+      </environmentvariables>
+      <materials>
+        <pipeline pipelineName="Commit" stageName="build" materialName="SuccessfulBuild" />
+      </materials>
+      <stage name="qa">
+        <jobs>
+          <job name="getArtifact">
+            <tasks>
+              <fetchartifact pipeline="Commit" stage="build" job="build" srcfile="libs/Donor-Connect-App.war" dest="pkg">
+                <runif status="passed" />
+              </fetchartifact>
+              <exec command="scp">
+                <arg>pkg/Donor-Connect-App.war</arg>
+                <arg>root@10.10.4.121:/usr/share/apache-tomcat-7.0.32/webapps/Donor-Connect-App.war</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+    </pipeline>
   </pipelines>
-<agents>
+  <agents>
     <agent hostname="twu29vm17.thoughtworks.com" ipaddress="10.10.4.119" uuid="6c29514a-5166-46c1-b356-35c0787e5252" />
   </agents>
 </cruise>
