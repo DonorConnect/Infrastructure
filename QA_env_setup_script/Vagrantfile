@@ -3,7 +3,7 @@
 
 Vagrant::Config.run do |config|
   config.vm.box = "centos"
-  config.vm.provision :shell, :path => "go_setup.sh"
-  config.vm.forward_port 8153, 8153
+  config.vm.provision :shell, :path => "setUpQA.sh"
+  config.vm.forward_port 8080, 8153
   config.vm.network :bridged
 end
