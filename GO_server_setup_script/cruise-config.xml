@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <cruise xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="cruise-config.xsd" schemaVersion="57">
-  <server artifactsdir="artifacts" />
+  <server artifactsdir="artifacts" serverId="7611b7d3-8652-4091-966c-19a7bc78b7d0"/>
   <pipelines group="DonnorConnect">
     <pipeline name="Commit">
       <environmentvariables>
