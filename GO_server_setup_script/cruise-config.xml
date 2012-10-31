@@ -2,7 +2,7 @@
 <cruise xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="cruise-config.xsd" schemaVersion="57">
   <server artifactsdir="artifacts" serverId="7611b7d3-8652-4091-966c-19a7bc78b7d0"/>
   <pipelines group="DonnorConnect">
-    <pipeline name="Commit">
+<pipeline name="Commit">
       <environmentvariables>
         <variable name="JAVA_HOME">
           <value>/usr/java/jdk1.7.0_09</value>
@@ -18,12 +18,29 @@
               <exec command="./go" workingdir="Donor-Connect-App">
                 <arg>build</arg>
               </exec>
-              <exec command="java">
-                <arg>-version</arg>
-              </exec>
             </tasks>
             <artifacts>
               <artifact src="Donor-Connect-App/build/libs/Donor-Connect-App.war" dest="libs" />
+            </artifacts>
+          </job>
+          <job name="zipFunctionalTest">
+            <tasks>
+              <exec command="zip">
+                <arg>-r</arg>
+                <arg>Functional-Test.zip</arg>
+                <arg>Functional-Test/</arg>
+              </exec>
+            </tasks>
+            <artifacts>
+              <artifact src="Functional-Test.zip" dest="libs" />
+            </artifacts>
+          </job>
+          <job name="createSQLFiles">
+            <tasks>
+              <exec command="./ourScript.sh" />
+            </tasks>
+            <artifacts>
+              <artifact src="out.sql" dest="libs" />
             </artifacts>
           </job>
         </jobs>
@@ -38,9 +55,10 @@
       <materials>
         <pipeline pipelineName="Commit" stageName="build" materialName="SuccessfulBuild" />
       </materials>
-      <stage name="qa">
+      <stage name="deployToQA">
+        <approval type="manual" />
         <jobs>
-          <job name="getArtifact">
+          <job name="getBuildArtifact">
             <tasks>
               <fetchartifact pipeline="Commit" stage="build" job="build" srcfile="libs/Donor-Connect-App.war" dest="pkg">
                 <runif status="passed" />
@@ -52,10 +70,50 @@
               </exec>
             </tasks>
           </job>
+          <job name="getSQLArtifact">
+            <tasks>
+              <fetchartifact pipeline="Commit" stage="build" job="createSQLFiles" srcfile="libs/out.sql" dest="pkg">
+                <runif status="passed" />
+              </fetchartifact>
+              <exec command="scp">
+                <arg>pkg/out.sql</arg>
+                <arg>root@10.10.4.121:/usr/share/Donor-Connect-App</arg>
+                <runif status="passed" />
+              </exec>
+              <exec command="ssh">
+                <arg>root@10.10.4.121</arg>
+                <arg>"cd"</arg>
+                <arg>"/usr/share/Donor-Connect-App/"</arg>
+                <arg>"./runSqlCommand.sh"</arg>
+                <runif status="passed" />
+              </exec>
+              <exec command="./UpdateSQLChangesFile.sh">
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
         </jobs>
       </stage>
-    </pipeline>
-  </pipelines>
+      <stage name="FunctionalTest">
+        <jobs>
+          <job name="unzipFunctionalTest">
+            <tasks>
+              <fetchartifact pipeline="Commit" stage="build" job="zipFunctionalTest" srcfile="libs/Functional-Test.zip" dest="pkg">
+                <runif status="passed" />
+              </fetchartifact>
+              <exec command="unzip">
+                <arg>-o</arg>
+                <arg>pkg/Functional-Test.zip</arg>
+              </exec>
+              <exec command="./go" workingdir="Functional-Test">
+                <arg>build</arg>
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+    </pipeline>  
+</pipelines>
   <agents>
     <agent hostname="twu29vm17.thoughtworks.com" ipaddress="10.10.4.119" uuid="6c29514a-5166-46c1-b356-35c0787e5252" />
   </agents>
