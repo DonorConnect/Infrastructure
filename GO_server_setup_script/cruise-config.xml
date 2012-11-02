@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <cruise xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="cruise-config.xsd" schemaVersion="57">
-  <server artifactsdir="artifacts" serverId="ed92742b-ff6d-4c08-b213-b411644c1fc6"/>
+  <server artifactsdir="artifacts" serverId="ed92742b-ff6d-4c08-b213-b411644c1fc6" />
   <pipelines group="DonnorConnect">
-<pipeline name="Commit">
+    <pipeline name="Commit">
       <environmentvariables>
         <variable name="JAVA_HOME">
           <value>/usr/java/jdk1.7.0_09</value>
@@ -16,11 +16,12 @@
           <job name="build">
             <tasks>
               <exec command="./go" workingdir="Donor-Connect-App">
-                <arg>build</arg>
+                <arg>clean build</arg>
               </exec>
             </tasks>
             <artifacts>
               <artifact src="Donor-Connect-App/build/libs/Donor-Connect-App.war" dest="libs" />
+              <artifact src="Donor-Connect-App/build/reports/" dest="reports" />
             </artifacts>
           </job>
           <job name="zipFunctionalTest">
@@ -35,12 +36,16 @@
               <artifact src="Functional-Test.zip" dest="libs" />
             </artifacts>
           </job>
-          <job name="createSQLFiles">
+          <job name="zipSqlFiles">
             <tasks>
-              <exec command="./ourScript.sh" />
+              <exec command="zip">
+                <arg>-r</arg>
+                <arg>SqlFiles.zip</arg>
+                <arg>Donor-Connect-App/SqlFiles/</arg>
+              </exec>
             </tasks>
             <artifacts>
-              <artifact src="out.sql" dest="libs" />
+              <artifact src="SqlFiles.zip" dest="libs" />
             </artifacts>
           </job>
         </jobs>
@@ -70,24 +75,29 @@
               </exec>
             </tasks>
           </job>
-          <job name="getSQLArtifact">
+          <job name="getSqlFiles">
             <tasks>
-              <fetchartifact pipeline="Commit" stage="build" job="createSQLFiles" srcfile="libs/out.sql" dest="pkg">
+              <fetchartifact pipeline="Commit" stage="build" job="zipSqlFiles" srcfile="libs/SqlFiles.zip" dest="pkg">
                 <runif status="passed" />
               </fetchartifact>
               <exec command="scp">
-                <arg>pkg/out.sql</arg>
-                <arg>root@10.10.4.121:/usr/share/Donor-Connect-App</arg>
+                <arg>pkg/SqlFiles.zip</arg>
+                <arg>root@10.10.4.121:/etc/donorsconnect/</arg>
                 <runif status="passed" />
               </exec>
               <exec command="ssh">
                 <arg>root@10.10.4.121</arg>
-                <arg>"cd"</arg>
-                <arg>"/usr/share/Donor-Connect-App/"</arg>
-                <arg>"./runSqlCommand.sh"</arg>
+                <arg>unzip</arg>
+                <arg>-o</arg>
+                <arg>/etc/donorsconnect/SqlFiles.zip</arg>
+                <arg>-d</arg>
+                <arg>/etc/donorsconnect/</arg>
                 <runif status="passed" />
               </exec>
-              <exec command="./UpdateSQLChangesFile.sh">
+              <exec command="ssh">
+                <arg>root@10.10.4.121</arg>
+                <arg>sh</arg>
+                <arg>/etc/donorsconnect/runSqlActions.sh</arg>
                 <runif status="passed" />
               </exec>
             </tasks>
@@ -112,9 +122,78 @@
           </job>
         </jobs>
       </stage>
-    </pipeline>  
-</pipelines>
+    </pipeline>
+    <pipeline name="SCDeploy">
+      <environmentvariables>
+        <variable name="JAVA_HOME">
+          <value>/usr/java/jdk1.7.0_09</value>
+        </variable>
+      </environmentvariables>
+      <materials>
+        <pipeline pipelineName="Commit" stageName="build" materialName="SuccessfulBuild" />
+      </materials>
+      <stage name="deployToSC">
+        <approval type="manual" />
+        <jobs>
+          <job name="getSqlFiles">
+            <tasks>
+              <fetchartifact pipeline="Commit" stage="build" job="zipSqlFiles" srcfile="libs/SqlFiles.zip" dest="pkg">
+                <runif status="passed" />
+              </fetchartifact>
+              <exec command="scp">
+                <arg>pkg/SqlFiles.zip</arg>
+                <arg>root@10.10.4.122:/etc/donorsconnect/</arg>
+                <runif status="passed" />
+              </exec>
+              <exec command="ssh">
+                <arg>root@10.10.4.122</arg>
+                <arg>unzip</arg>
+                <arg>-o</arg>
+                <arg>/etc/donorsconnect/SqlFiles.zip</arg>
+                <arg>-d</arg>
+                <arg>/etc/donorsconnect/</arg>
+                <runif status="passed" />
+              </exec>
+              <exec command="ssh">
+                <arg>root@10.10.4.122</arg>
+                <arg>sh</arg>
+                <arg>/etc/donorsconnect/runSqlActions.sh</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+          <job name="getBuildArtifact">
+            <tasks>
+              <exec command="scp">
+                <arg>pkg/Donor-Connect-App.war</arg>
+                <arg>root@10.10.4.122:/usr/share/apache-tomcat-7.0.32/webapps/Donor-Connect-App.war</arg>
+                <runif status="passed" />
+              </exec>
+              <fetchartifact pipeline="Commit" stage="build" job="build" srcfile="libs/Donor-Connect-App.war" dest="pkg">
+                <runif status="passed" />
+              </fetchartifact>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="checkHttpOK">
+        <jobs>
+          <job name="checkHttpStatus">
+            <tasks>
+              <exec command="ssh">
+                <arg>root@10.10.4.122</arg>
+                <arg>sh</arg>
+                <arg>/etc/donorsconnect/checkHttpStatus.sh</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+    </pipeline>
+  </pipelines>
   <agents>
     <agent hostname="twu29vm17.thoughtworks.com" ipaddress="10.10.4.119" uuid="6c29514a-5166-46c1-b356-35c0787e5252" />
   </agents>
 </cruise>
+
