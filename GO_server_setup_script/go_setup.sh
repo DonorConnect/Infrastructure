@@ -5,9 +5,18 @@ yum install unzip -y
 yum install git -y
 
 #Install MySQL and start service
-yum install http://10.10.4.119/MySQL-server-5.5.28-1.linux2.6.x86_64.rpm -y
-yum install http://10.10.4.119/MySQL-client-5.5.28-1.linux2.6.x86_64.rpm -y
-service mysqld start
+mysql --version|grep 5.5.28
+if [ ! $? -eq 0 ]
+then
+    echo "uninstalling wrong version of mysql if there is any..."
+    yum erase mysql-server mysql mysql-libs -y
+    echo "installing mysql version 5.5.28..."
+    yum install http://10.10.4.119/MySQL-server-5.5.28-1.linux2.6.x86_64.rpm -y
+    yum install http://10.10.4.119/MySQL-client-5.5.28-1.linux2.6.x86_64.rpm -y
+else
+    echo "mysql version 5.5.28 already installed!"
+fi
+service mysql start
 
 #Install Java JDK v6 and v7
 rpm -ivh http://10.10.4.119/jdk-7u9-linux-x64.rpm 
