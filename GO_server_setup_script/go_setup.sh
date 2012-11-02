@@ -6,6 +6,7 @@ yum install git -y
 
 #Install MySQL and start service
 yum install http://10.10.4.119/MySQL-server-5.5.28-1.linux2.6.x86_64.rpm -y
+yum install http://10.10.4.119/MySQL-client-5.5.28-1.linux2.6.x86_64.rpm -y
 service mysqld start
 
 #Install Java JDK v6 and v7
