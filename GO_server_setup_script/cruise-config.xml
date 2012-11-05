@@ -51,7 +51,11 @@
         </jobs>
       </stage>
     </pipeline>
-    <pipeline name="QADeploy">
+    <pipeline name="QADeploy" template="DeploymentAndTest">
+      <params>
+        <param name="TARGET_SERVER">10.10.4.121</param>
+        <param name="TEST_TYPE">functionalTest</param>
+      </params>
       <environmentvariables>
         <variable name="JAVA_HOME">
           <value>/usr/java/jdk1.7.0_09</value>
@@ -60,21 +64,27 @@
       <materials>
         <pipeline pipelineName="Commit" stageName="build" materialName="SuccessfulBuild" />
       </materials>
-      <stage name="deployToQA">
+    </pipeline>
+    <pipeline name="ShowcaseDeploy" template="DeploymentAndTest">
+      <params>
+        <param name="TARGET_SERVER">10.10.4.122</param>
+        <param name="TEST_TYPE">smokeTest</param>
+      </params>
+      <environmentvariables>
+        <variable name="JAVA_HOME">
+          <value>/usr/java/jdk1.7.0_09</value>
+        </variable>
+      </environmentvariables>
+      <materials>
+        <pipeline pipelineName="Commit" stageName="build" materialName="SuccessfulBuild" />
+      </materials>
+    </pipeline>
+  </pipelines>
+  <templates>
+    <pipeline name="DeploymentAndTest">
+      <stage name="deploy">
         <approval type="manual" />
         <jobs>
-          <job name="getBuildArtifact">
-            <tasks>
-              <fetchartifact pipeline="Commit" stage="build" job="build" srcfile="libs/Donor-Connect-App.war" dest="pkg">
-                <runif status="passed" />
-              </fetchartifact>
-              <exec command="scp">
-                <arg>pkg/Donor-Connect-App.war</arg>
-                <arg>root@10.10.4.121:/usr/share/apache-tomcat-7.0.32/webapps/Donor-Connect-App.war</arg>
-                <runif status="passed" />
-              </exec>
-            </tasks>
-          </job>
           <job name="getSqlFiles">
             <tasks>
               <fetchartifact pipeline="Commit" stage="build" job="zipSqlFiles" srcfile="libs/SqlFiles.zip" dest="pkg">
@@ -82,11 +92,11 @@
               </fetchartifact>
               <exec command="scp">
                 <arg>pkg/SqlFiles.zip</arg>
-                <arg>root@10.10.4.121:/etc/donorsconnect/</arg>
+                <arg>root@#{TARGET_SERVER}:/etc/donorsconnect/</arg>
                 <runif status="passed" />
               </exec>
               <exec command="ssh">
-                <arg>root@10.10.4.121</arg>
+                <arg>root@#{TARGET_SERVER}</arg>
                 <arg>unzip</arg>
                 <arg>-o</arg>
                 <arg>/etc/donorsconnect/SqlFiles.zip</arg>
@@ -95,9 +105,21 @@
                 <runif status="passed" />
               </exec>
               <exec command="ssh">
-                <arg>root@10.10.4.121</arg>
+                <arg>root@#{TARGET_SERVER}</arg>
                 <arg>sh</arg>
                 <arg>/etc/donorsconnect/runSqlActions.sh</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+          <job name="getBuildArtifact">
+            <tasks>
+              <fetchartifact pipeline="Commit" stage="build" job="build" srcfile="libs/Donor-Connect-App.war" dest="pkg">
+                <runif status="passed" />
+              </fetchartifact>
+              <exec command="scp">
+                <arg>pkg/Donor-Connect-App.war</arg>
+                <arg>root@#{TARGET_SERVER}:/usr/share/apache-tomcat-7.0.32/webapps/Donor-Connect-App.war</arg>
                 <runif status="passed" />
               </exec>
             </tasks>
@@ -109,7 +131,7 @@
           <job name="checkHttpStatus">
             <tasks>
               <exec command="ssh">
-                <arg>root@10.10.4.121</arg>
+                <arg>root@#{TARGET_SERVER}</arg>
                 <arg>sh</arg>
                 <arg>/etc/donorsconnect/checkHttpStatus.sh</arg>
                 <runif status="passed" />
@@ -118,7 +140,7 @@
           </job>
         </jobs>
       </stage>
-      <stage name="FunctionalTest">
+      <stage name="test">
         <jobs>
           <job name="unzipFunctionalTest">
             <tasks>
@@ -130,82 +152,14 @@
                 <arg>pkg/Functional-Test.zip</arg>
               </exec>
               <exec command="./go" workingdir="Functional-Test">
-                <arg>build</arg>
+                <arg>#{TEST_TYPE}</arg>
               </exec>
             </tasks>
           </job>
         </jobs>
       </stage>
     </pipeline>
-    <pipeline name="SCDeploy">
-      <environmentvariables>
-        <variable name="JAVA_HOME">
-          <value>/usr/java/jdk1.7.0_09</value>
-        </variable>
-      </environmentvariables>
-      <materials>
-        <pipeline pipelineName="Commit" stageName="build" materialName="SuccessfulBuild" />
-      </materials>
-      <stage name="deployToSC">
-        <approval type="manual" />
-        <jobs>
-          <job name="getSqlFiles">
-            <tasks>
-              <fetchartifact pipeline="Commit" stage="build" job="zipSqlFiles" srcfile="libs/SqlFiles.zip" dest="pkg">
-                <runif status="passed" />
-              </fetchartifact>
-              <exec command="scp">
-                <arg>pkg/SqlFiles.zip</arg>
-                <arg>root@10.10.4.122:/etc/donorsconnect/</arg>
-                <runif status="passed" />
-              </exec>
-              <exec command="ssh">
-                <arg>root@10.10.4.122</arg>
-                <arg>unzip</arg>
-                <arg>-o</arg>
-                <arg>/etc/donorsconnect/SqlFiles.zip</arg>
-                <arg>-d</arg>
-                <arg>/etc/donorsconnect/</arg>
-                <runif status="passed" />
-              </exec>
-              <exec command="ssh">
-                <arg>root@10.10.4.122</arg>
-                <arg>sh</arg>
-                <arg>/etc/donorsconnect/runSqlActions.sh</arg>
-                <runif status="passed" />
-              </exec>
-            </tasks>
-          </job>
-          <job name="getBuildArtifact">
-            <tasks>
-              <exec command="scp">
-                <arg>pkg/Donor-Connect-App.war</arg>
-                <arg>root@10.10.4.122:/usr/share/apache-tomcat-7.0.32/webapps/Donor-Connect-App.war</arg>
-                <runif status="passed" />
-              </exec>
-              <fetchartifact pipeline="Commit" stage="build" job="build" srcfile="libs/Donor-Connect-App.war" dest="pkg">
-                <runif status="passed" />
-              </fetchartifact>
-            </tasks>
-          </job>
-        </jobs>
-      </stage>
-      <stage name="checkHttpOK">
-        <jobs>
-          <job name="checkHttpStatus">
-            <tasks>
-              <exec command="ssh">
-                <arg>root@10.10.4.122</arg>
-                <arg>sh</arg>
-                <arg>/etc/donorsconnect/checkHttpStatus.sh</arg>
-                <runif status="passed" />
-              </exec>
-            </tasks>
-          </job>
-        </jobs>
-      </stage>
-    </pipeline>
-  </pipelines>
+  </templates>
   <agents>
     <agent hostname="twu29vm17.thoughtworks.com" ipaddress="10.10.4.119" uuid="6c29514a-5166-46c1-b356-35c0787e5252" />
   </agents>
