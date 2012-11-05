@@ -104,6 +104,20 @@
           </job>
         </jobs>
       </stage>
+      <stage name="checkHttpOK">
+        <jobs>
+          <job name="checkHttpStatus">
+            <tasks>
+              <exec command="ssh">
+                <arg>root@10.10.4.121</arg>
+                <arg>sh</arg>
+                <arg>/etc/donorsconnect/checkHttpStatus.sh</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
       <stage name="FunctionalTest">
         <jobs>
           <job name="unzipFunctionalTest">
