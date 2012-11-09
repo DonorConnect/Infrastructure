@@ -51,9 +51,12 @@
         </jobs>
       </stage>
     </pipeline>
-    <pipeline name="QADeploy" template="DeploymentAndTest">
+    <pipeline name="QADeploy" labeltemplate="Commit-${COMMITBUILD}" template="DeploymentAndTest">
       <params>
+        <param name="UPSTREAM_PIPELINE">Commit</param>
         <param name="TARGET_SERVER">10.10.4.121</param>
+        <param name="PRIVATE_KEY">id_dsa</param>
+        <param name="TARGET_USER">root</param>
         <param name="TEST_TYPE">functionalTest</param>
       </params>
       <environmentvariables>
@@ -62,12 +65,15 @@
         </variable>
       </environmentvariables>
       <materials>
-        <pipeline pipelineName="Commit" stageName="build" materialName="SuccessfulBuild" />
+        <pipeline pipelineName="Commit" stageName="build" materialName="COMMITBUILD" />
       </materials>
     </pipeline>
-    <pipeline name="ShowcaseDeploy" template="DeploymentAndTest">
+    <pipeline name="ShowcaseDeploy" labeltemplate="${QATESTED}" template="DeploymentAndTest">
       <params>
+        <param name="UPSTREAM_PIPELINE">Commit/QADeploy</param>
         <param name="TARGET_SERVER">10.10.4.122</param>
+        <param name="PRIVATE_KEY">id_dsa</param>
+        <param name="TARGET_USER">root</param>
         <param name="TEST_TYPE">smokeTest</param>
       </params>
       <environmentvariables>
@@ -76,7 +82,24 @@
         </variable>
       </environmentvariables>
       <materials>
-        <pipeline pipelineName="Commit" stageName="build" materialName="SuccessfulBuild" />
+        <pipeline pipelineName="QADeploy" stageName="test" materialName="QATESTED" />
+      </materials>
+    </pipeline>
+    <pipeline name="ProductionDeploy" labeltemplate="${SHOWCASECLEARED}" template="DeploymentAndTest">
+      <params>
+        <param name="UPSTREAM_PIPELINE">Commit/QADeploy/ShowcaseDeploy</param>
+        <param name="TARGET_SERVER">ec2-23-20-148-30.compute-1.amazonaws.com</param>
+        <param name="PRIVATE_KEY">donorsconnect.private</param>
+        <param name="TARGET_USER">donorconnect</param>
+        <param name="TEST_TYPE">smokeTest</param>
+      </params>
+      <environmentvariables>
+        <variable name="JAVA_HOME">
+          <value>/usr/java/jdk1.7.0_08</value>
+        </variable>
+      </environmentvariables>
+      <materials>
+        <pipeline pipelineName="ShowcaseDeploy" stageName="test" materialName="SHOWCASECLEARED" />
       </materials>
     </pipeline>
   </pipelines>
@@ -87,16 +110,20 @@
         <jobs>
           <job name="getSqlFiles">
             <tasks>
-              <fetchartifact pipeline="Commit" stage="build" job="zipSqlFiles" srcfile="libs/SqlFiles.zip" dest="pkg">
+              <fetchartifact pipeline="#{UPSTREAM_PIPELINE}" stage="build" job="zipSqlFiles" srcfile="libs/SqlFiles.zip" dest="pkg">
                 <runif status="passed" />
               </fetchartifact>
               <exec command="scp">
+                <arg>-i</arg>
+                <arg>/var/go/.ssh/#{PRIVATE_KEY}</arg>
                 <arg>pkg/SqlFiles.zip</arg>
-                <arg>root@#{TARGET_SERVER}:/etc/donorsconnect/</arg>
+                <arg>#{TARGET_USER}@#{TARGET_SERVER}:/etc/donorsconnect/</arg>
                 <runif status="passed" />
               </exec>
               <exec command="ssh">
-                <arg>root@#{TARGET_SERVER}</arg>
+                <arg>-i</arg>
+                <arg>/var/go/.ssh/#{PRIVATE_KEY}</arg>
+                <arg>#{TARGET_USER}@#{TARGET_SERVER}</arg>
                 <arg>unzip</arg>
                 <arg>-o</arg>
                 <arg>/etc/donorsconnect/SqlFiles.zip</arg>
@@ -105,7 +132,9 @@
                 <runif status="passed" />
               </exec>
               <exec command="ssh">
-                <arg>root@#{TARGET_SERVER}</arg>
+                <arg>-i</arg>
+                <arg>/var/go/.ssh/#{PRIVATE_KEY}</arg>
+                <arg>#{TARGET_USER}@#{TARGET_SERVER}</arg>
                 <arg>sh</arg>
                 <arg>/etc/donorsconnect/runSqlActions.sh</arg>
                 <runif status="passed" />
@@ -114,12 +143,29 @@
           </job>
           <job name="getBuildArtifact">
             <tasks>
-              <fetchartifact pipeline="Commit" stage="build" job="build" srcfile="libs/Donor-Connect-App.war" dest="pkg">
+              <fetchartifact pipeline="#{UPSTREAM_PIPELINE}" stage="build" job="build" srcfile="libs/Donor-Connect-App.war" dest="pkg">
                 <runif status="passed" />
               </fetchartifact>
               <exec command="scp">
+                <arg>-i</arg>
+                <arg>/var/go/.ssh/#{PRIVATE_KEY}</arg>
                 <arg>pkg/Donor-Connect-App.war</arg>
-                <arg>root@#{TARGET_SERVER}:/usr/share/apache-tomcat-7.0.32/webapps/Donor-Connect-App.war</arg>
+                <arg>#{TARGET_USER}@#{TARGET_SERVER}:/usr/share/apache-tomcat-7.0.32/webapps/Donor-Connect-App.war</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+            <artifacts>
+              <artifact src="pkg/Donor-Connect-App.war" dest="libs/" />
+            </artifacts>
+          </job>
+          <job name="restartTomcat">
+            <tasks>
+              <exec command="ssh">
+                <arg>-i</arg>
+                <arg>/var/go/.ssh/#{PRIVATE_KEY}</arg>
+                <arg>#{TARGET_USER}@#{TARGET_SERVER}</arg>
+                <arg>sh</arg>
+                <arg>/etc/donorsconnect/restartTomcat.sh</arg>
                 <runif status="passed" />
               </exec>
             </tasks>
@@ -130,10 +176,9 @@
         <jobs>
           <job name="checkHttpStatus">
             <tasks>
-              <exec command="ssh">
-                <arg>root@#{TARGET_SERVER}</arg>
-                <arg>sh</arg>
+              <exec command="sh">
                 <arg>/etc/donorsconnect/checkHttpStatus.sh</arg>
+                <arg>#{TARGET_SERVER}</arg>
                 <runif status="passed" />
               </exec>
             </tasks>
@@ -144,7 +189,7 @@
         <jobs>
           <job name="unzipFunctionalTest">
             <tasks>
-              <fetchartifact pipeline="Commit" stage="build" job="zipFunctionalTest" srcfile="libs/Functional-Test.zip" dest="pkg">
+              <fetchartifact pipeline="#{UPSTREAM_PIPELINE}" stage="build" job="zipFunctionalTest" srcfile="libs/Functional-Test.zip" dest="pkg">
                 <runif status="passed" />
               </fetchartifact>
               <exec command="unzip">
@@ -164,4 +209,3 @@
     <agent hostname="twu29vm17.thoughtworks.com" ipaddress="10.10.4.119" uuid="6c29514a-5166-46c1-b356-35c0787e5252" />
   </agents>
 </cruise>
-
