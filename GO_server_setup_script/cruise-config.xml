@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <cruise xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="cruise-config.xsd" schemaVersion="57">
-  <server artifactsdir="artifacts" serverId="ed92742b-ff6d-4c08-b213-b411644c1fc6" />
+  <server artifactsdir="artifacts" />
   <pipelines group="DonnorConnect">
     <pipeline name="Commit">
       <environmentvariables>
@@ -19,6 +19,10 @@
                 <arg>clean build</arg>
               </exec>
             </tasks>
+            <tabs>
+              <tab name="Test-Reports" path="reports/tests/index.html" />
+              <tab name="coverage" path="reports/emma/coverage.html" />
+            </tabs>
             <artifacts>
               <artifact src="Donor-Connect-App/build/libs/Donor-Connect-App.war" dest="libs" />
               <artifact src="Donor-Connect-App/build/reports/" dest="reports" />
@@ -62,6 +66,9 @@
       <environmentvariables>
         <variable name="JAVA_HOME">
           <value>/usr/java/jdk1.7.0_09</value>
+        </variable>
+        <variable name="DISPLAY">
+          <value>:1</value>
         </variable>
       </environmentvariables>
       <materials>
@@ -108,8 +115,25 @@
       <stage name="deploy">
         <approval type="manual" />
         <jobs>
-          <job name="getSqlFiles">
+          <job name="deploy">
             <tasks>
+              <exec command="ssh">
+                <arg>-i</arg>
+                <arg>/var/go/.ssh/#{PRIVATE_KEY}</arg>
+                <arg>#{TARGET_USER}@#{TARGET_SERVER}</arg>
+                <arg>sh</arg>
+                <arg>/usr/share/apache-tomcat-7.0.32/bin/shutdown.sh</arg>
+                <runif status="passed" />
+              </exec>
+              <exec command="ssh">
+                <arg>-i</arg>
+                <arg>/var/go/.ssh/#{PRIVATE_KEY}</arg>
+                <arg>#{TARGET_USER}@#{TARGET_SERVER}</arg>
+                <arg>rm</arg>
+                <arg>-rf</arg>
+                <arg>/usr/share/apache-tomcat-7.0.32/webapps/Donor-Connect-App*</arg>
+                <runif status="passed" />
+              </exec>
               <fetchartifact pipeline="#{UPSTREAM_PIPELINE}" stage="build" job="zipSqlFiles" srcfile="libs/SqlFiles.zip" dest="pkg">
                 <runif status="passed" />
               </fetchartifact>
@@ -139,10 +163,6 @@
                 <arg>/etc/donorsconnect/runSqlActions.sh</arg>
                 <runif status="passed" />
               </exec>
-            </tasks>
-          </job>
-          <job name="getBuildArtifact">
-            <tasks>
               <fetchartifact pipeline="#{UPSTREAM_PIPELINE}" stage="build" job="build" srcfile="libs/Donor-Connect-App.war" dest="pkg">
                 <runif status="passed" />
               </fetchartifact>
@@ -153,22 +173,22 @@
                 <arg>#{TARGET_USER}@#{TARGET_SERVER}:/usr/share/apache-tomcat-7.0.32/webapps/Donor-Connect-App.war</arg>
                 <runif status="passed" />
               </exec>
-            </tasks>
-            <artifacts>
-              <artifact src="pkg/Donor-Connect-App.war" dest="libs/" />
-            </artifacts>
-          </job>
-          <job name="restartTomcat">
-            <tasks>
               <exec command="ssh">
                 <arg>-i</arg>
                 <arg>/var/go/.ssh/#{PRIVATE_KEY}</arg>
                 <arg>#{TARGET_USER}@#{TARGET_SERVER}</arg>
                 <arg>sh</arg>
-                <arg>/etc/donorsconnect/restartTomcat.sh</arg>
+                <arg>/usr/share/apache-tomcat-7.0.32/bin/startup.sh</arg>
                 <runif status="passed" />
               </exec>
             </tasks>
+            <tabs>
+              <tab name="Test-Reports" path="reports/tests/index.html" />
+            </tabs>
+            <artifacts>
+              <artifact src="pkg/Donor-Connect-App.war" dest="libs/" />
+              <artifact src="Functional-Test/build/reports/" dest="reports" />
+            </artifacts>
           </job>
         </jobs>
       </stage>
@@ -209,3 +229,5 @@
     <agent hostname="twu29vm17.thoughtworks.com" ipaddress="10.10.4.119" uuid="6c29514a-5166-46c1-b356-35c0787e5252" />
   </agents>
 </cruise>
+
+
