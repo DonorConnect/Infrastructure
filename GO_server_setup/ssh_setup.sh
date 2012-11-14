@@ -7,6 +7,7 @@ rm -rf go_ssh
 mkdir -p go_ssh/.ssh
 cp go_user.pub go_ssh/.ssh/authorized_keys
 
+# change the three ips below to your IP of the QA, Showcase, and Production environment
 scp -r ~/go_ssh/.ssh root@10.10.4.121:~/
 scp -r ~/go_shh/.ssh root@10.10.4.122:~/
 scp -r ~/go_ssh/.ssh root@10.10.4.123:~/

@@ -4,6 +4,11 @@
 Vagrant::Config.run do |config|
   config.vm.box = "centos"
   config.vm.box_url = "http://10.10.4.119/CentOS-6.3-x86_64-minimal.box"
-  config.vm.provision :shell, :path => "go_setup.sh"
+  config.vm.provision :shell do |shell|
+    shell.path = "go_setup.sh"
+    #you should modify this ip address to the your file share server address
+    shell.args = "10.10.4.119"
+  end
+
   config.vm.network :bridged
 end
