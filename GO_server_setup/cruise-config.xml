@@ -95,7 +95,7 @@
     <pipeline name="ProductionDeploy" labeltemplate="${SHOWCASECLEARED}" template="DeploymentAndTest">
       <params>
         <param name="UPSTREAM_PIPELINE">Commit/QADeploy/ShowcaseDeploy</param>
-        <param name="TARGET_SERVER">ec2-23-20-148-30.compute-1.amazonaws.com</param>
+        <param name="TARGET_SERVER">ec2-184-73-107-109.compute-1.amazonaws.com</param>
         <param name="PRIVATE_KEY">donorsconnect.private</param>
         <param name="TARGET_USER">donorconnect</param>
         <param name="TEST_TYPE">smokeTest</param>
